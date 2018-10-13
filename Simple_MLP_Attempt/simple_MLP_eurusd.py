@@ -8,6 +8,7 @@ import pandas
 import math
 from keras.models import Sequential
 from keras.layers import Dense
+from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 import os
 
 def convert2float(data):
@@ -21,6 +22,7 @@ def convert2float(data):
 
 
 WEIGHTS_DIR = os.path.join("..","WEIGHTS")
+CSV_DIR = os.path.join("..","CSV")
 #PREFIX = "simple_MLP_EURUSD_0"
 #PREFIX = "simple_MLP_EURUSD_2_epoch"
 PREFIX = "simple_MLP_EURUSD_20_epoch"
@@ -53,8 +55,9 @@ class MLPPredictor:
         self.trainX, self.trainY = self.create_dataset(train, self.look_back)
         self.testX, self.testY = self.create_dataset(test, self.look_back)
         #self.model = self.create_small_model()
-        self.model = self.create_medium_model()
+        #self.model = self.create_medium_model()
         #self.model = self.create_large_model()
+        self.model = self.create_very_large_model()
 
 
     def create_dataset(self, dataset, look_back=1):
@@ -101,8 +104,26 @@ class MLPPredictor:
         # 97,5K parameter
         return model
 
+    def create_deeper_model(self):
+        # create and fit Multilayer Perceptron model
+        model = Sequential()
+        model.add(Dense(2000, input_dim=self.look_back, activation='relu'))
+        model.add(Dense(1000, input_dim=self.look_back, activation='relu'))
+        model.add(Dense(1))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        # 97,5K parameter
+        return model
+
     def train(self):
-        self.model.fit(self.trainX, self.trainY,  validation_data=(self.testX, self.testY), nb_epoch=20, batch_size=20, verbose=1)
+        checkpoint = ModelCheckpoint(filepath=os.path.join(WEIGHTS_DIR, PREFIX + "_{epoch:04d}.hdf5"),
+                                     save_best_only=True,
+                                     save_weights_only=True)
+        csv_logger = CSVLogger(filename=os.path.join(CSV_DIR,'results_' + PREFIX + '.csv'), append=True, )
+
+        es = EarlyStopping(patience=10)
+
+        self.model.fit(self.trainX, self.trainY,  validation_data=(self.testX, self.testY), nb_epoch=20, batch_size=20, verbose=1,
+                       callbacks=[checkpoint, csv_logger, es])
         self.model.save_weights(os.path.join(WEIGHTS_DIR, PREFIX + "_final.h5"), overwrite=True)
 
     def load_model(self, path):
@@ -144,10 +165,9 @@ if __name__ == "__main__":
     #PREFIX = "simple_MLP_EURUSD_20_epoch_medium"
     #predictor.model = predictor.create_medium_model()
     #predictor.train()
-    PREFIX = "simple_MLP_EURUSD_20_epoch_large"
-    predictor.model = predictor.create_large_model()
-    #predictor.train()
-    predictor.load_model(os.path.join(WEIGHTS_DIR, PREFIX + "_final.h5"))
+    PREFIX = "simple_MLP_EURUSD_20_epoch_very_large"
+    predictor.train()
+    #predictor.load_model(os.path.join(WEIGHTS_DIR, PREFIX + "_final.h5"))
     predictor.eval()
 
 

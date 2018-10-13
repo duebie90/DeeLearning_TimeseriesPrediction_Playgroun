@@ -1,0 +1,35 @@
+###MLP (NON CONV)
+
+
+Netzgrößen:
+~100
+~36K
+~65K (training sample number)
+~97,5K (150% training sample)
+
+Anzahl der Layer @ gleichen Netzgrößen
+2,3,4
+
+
+Größe der Historie (Minuten, Ticks)
+10,
+100,
+1000,
+
+
+
+
+ERGEBNISSE:
+
+65K Parameter leifern bestes Ergebnis. Kein Overfitting
+97,5K pending
+
+
+###CNN
+
+
+
+###LSTM
+
+
+
