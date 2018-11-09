@@ -22,7 +22,8 @@ Größe der Historie (Minuten, Ticks)
 ERGEBNISSE:
 
 65K Parameter leifern bestes Ergebnis. Kein Overfitting
-97,5K pending
+97,5K kein Overfitting
+
 
 
 ###CNN

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas
 import math
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, LSTM, Dropout, Activation
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 import os
 
@@ -52,21 +52,36 @@ class MLPPredictor:
     def __init__(self):
         # reshape into X=t and Y=t+1
         self.look_back = 10
-        self.trainX, self.trainY = self.create_dataset(train, self.look_back)
-        self.testX, self.testY = self.create_dataset(test, self.look_back)
+        self.look_forward = 10
+        self.trainX, self.trainY = self.create_dataset(train, self.look_back, self.look_forward)
+        self.testX, self.testY = self.create_dataset(test, self.look_back, self.look_forward)
         #self.model = self.create_small_model()
         #self.model = self.create_medium_model()
         #self.model = self.create_large_model()
+        #self.model = self.create_deeper_model()
+        #self.model = self.create_LSTM_model()
         self.model = self.create_very_large_model()
 
 
-    def create_dataset(self, dataset, look_back=1):
+    def create_dataset(self, dataset, look_back=1, look_forward=1):
         dataX, dataY = [], []
-        for i in range(len(dataset)-look_back-1):
+        for i in range(len(dataset)-look_back-look_forward - 1):
             a = dataset[i:(i+look_back), 0]
-            dataX.append(a)
-            dataY.append(dataset[i + look_back, 0])
+            dataX.append(np.expand_dims(a, axis=1))
+            dataY.append(dataset[i + look_back + look_forward, 0])
+
         return np.array(dataX), np.array(dataY)
+
+    def create_LSTM_model(self):
+        model = Sequential()
+        model.add(LSTM(input_shape=(10,1), output_dim=50, return_sequences=True))
+        model.add(Dropout(0.5))
+        model.add(LSTM(256))
+        model.add(Dropout(0.5))
+        model.add(Dense(1))
+        model.add(Activation("linear"))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        return model
 
     def create_small_model(self):
         # create and fit Multilayer Perceptron model
@@ -107,8 +122,18 @@ class MLPPredictor:
     def create_deeper_model(self):
         # create and fit Multilayer Perceptron model
         model = Sequential()
-        model.add(Dense(2000, input_dim=self.look_back, activation='relu'))
-        model.add(Dense(1000, input_dim=self.look_back, activation='relu'))
+        model.add(Dense(5417, input_dim=self.look_back, activation='relu'))
+        model.add(Dense(7, activation='relu'))
+        model.add(Dense(1))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        # 97,5K parameter
+        return model
+
+    def create_deeper_model(self):
+        # create and fit Multilayer Perceptron model
+        model = Sequential()
+        model.add(Dense(5417, input_dim=self.look_back, activation='relu'))
+        model.add(Dense(7, activation='relu'))
         model.add(Dense(1))
         model.compile(loss='mean_squared_error', optimizer='adam')
         # 97,5K parameter
@@ -122,7 +147,7 @@ class MLPPredictor:
 
         es = EarlyStopping(patience=10)
 
-        self.model.fit(self.trainX, self.trainY,  validation_data=(self.testX, self.testY), nb_epoch=20, batch_size=20, verbose=1,
+        self.model.fit(self.trainX, self.trainY,  validation_data=(self.testX, self.testY), nb_epoch=100, batch_size=20, verbose=1,
                        callbacks=[checkpoint, csv_logger, es])
         self.model.save_weights(os.path.join(WEIGHTS_DIR, PREFIX + "_final.h5"), overwrite=True)
 
@@ -165,7 +190,7 @@ if __name__ == "__main__":
     #PREFIX = "simple_MLP_EURUSD_20_epoch_medium"
     #predictor.model = predictor.create_medium_model()
     #predictor.train()
-    PREFIX = "simple_MLP_EURUSD_20_epoch_very_large"
+    PREFIX = "simple_MLP_EURUSD_20_epoch_deeper_97K_look_forward_10"
     predictor.train()
     #predictor.load_model(os.path.join(WEIGHTS_DIR, PREFIX + "_final.h5"))
     predictor.eval()
